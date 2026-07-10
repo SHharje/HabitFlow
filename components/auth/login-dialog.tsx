@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Mail, Lock, User, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
 
 interface LoginDialogProps {
   open: boolean
@@ -21,6 +22,7 @@ interface LoginDialogProps {
 
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const { signIn, signUp, isLoading } = useAuth()
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
@@ -37,6 +39,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
       // Reset form
       setEmail("")
       setPassword("")
+      router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign in")
     }
@@ -53,6 +56,8 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
       setEmail("")
       setPassword("")
       setName("")
+      // Auto-login: signUp already sets the token, redirect immediately
+      router.push("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account")
     }
