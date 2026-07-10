@@ -15,7 +15,6 @@ import {
   Star,
   ArrowRight,
   Play,
-  LogOut,
   Sparkles,
 } from "lucide-react"
 import { LoginDialog } from "@/components/auth/login-dialog"
@@ -90,20 +89,18 @@ const features = [
 
 export default function HomePage() {
   const [showLogin, setShowLogin] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
-  const { user, signOut, isLoading } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      setIsRedirecting(true)
       router.push("/dashboard")
     }
   }, [user, isLoading, router])
 
-  // Show loading animation while checking auth or redirecting
-  if (isLoading || isRedirecting || (user && !isLoading)) {
+  // Show loading animation while checking auth or while authenticated (redirecting to dashboard)
+  if (isLoading || user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
         {/* Animated background orbs */}
@@ -167,7 +164,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            {isRedirecting || user ? "Welcome back!" : "HabitFlow"}
+            {user ? "Welcome back!" : "HabitFlow"}
           </motion.p>
           <motion.p
             className="text-sm text-muted-foreground font-medium"
@@ -175,7 +172,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            {isRedirecting || user ? "Taking you to your dashboard..." : "Loading your experience..."}
+            {user ? "Taking you to your dashboard..." : "Loading your experience..."}
           </motion.p>
 
           {/* Loading dots */}
@@ -210,27 +207,12 @@ export default function HomePage() {
             </div>
             <span className="font-serif text-2xl font-bold text-foreground">HabitFlow</span>
           </div>
-          {user ? (
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground font-medium">Welcome, {user.name}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={signOut}
-                className="border-border hover:bg-muted bg-transparent"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          ) : (
-            <Button
-              onClick={() => setShowLogin(true)}
-              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg shadow-primary/25"
-            >
-              Get Started
-            </Button>
-          )}
+          <Button
+            onClick={() => setShowLogin(true)}
+            className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg shadow-primary/25"
+          >
+            Get Started
+          </Button>
         </div>
       </motion.nav>
 

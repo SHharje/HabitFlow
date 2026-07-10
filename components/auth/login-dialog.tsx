@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Mail, Lock, User, AlertCircle } from "lucide-react"
+import { CheckCircle, Mail, Lock, User, AlertCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
@@ -21,27 +21,49 @@ interface LoginDialogProps {
 }
 
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
-  const { signIn, signUp, isLoading } = useAuth()
+  const { signIn, signUp } = useAuth()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("login")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const validateForm = (isSignUp: boolean): string | null => {
+    if (!email.trim()) return "Email is required."
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email address."
+    if (!password) return "Password is required."
+    if (password.length < 6) return "Password must be at least 6 characters."
+    if (isSignUp && !name.trim()) return "Full name is required."
+    if (isSignUp && name.trim().length < 2) return "Name must be at least 2 characters."
+    return null
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
+    const validationError = validateForm(false)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setIsSubmitting(true)
     try {
-      await signIn(email, password)
-      onOpenChange(false)
-      // Reset form
-      setEmail("")
-      setPassword("")
-      router.push("/dashboard")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sign in")
+      const result = await signIn(email.trim(), password)
+      if (result.success) {
+        onOpenChange(false)
+        resetForm()
+        router.push("/dashboard")
+      } else {
+        setError(result.error || "Failed to sign in.")
+      }
+    } catch {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -49,17 +71,26 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     e.preventDefault()
     setError("")
 
+    const validationError = validateForm(true)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setIsSubmitting(true)
     try {
-      await signUp(email, password, name)
-      onOpenChange(false)
-      // Reset form
-      setEmail("")
-      setPassword("")
-      setName("")
-      // Auto-login: signUp already sets the token, redirect immediately
-      router.push("/dashboard")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create account")
+      const result = await signUp(email.trim(), password, name.trim())
+      if (result.success) {
+        onOpenChange(false)
+        resetForm()
+        router.push("/dashboard")
+      } else {
+        setError(result.error || "Failed to create account.")
+      }
+    } catch {
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -68,12 +99,14 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     setPassword("")
     setName("")
     setError("")
+    setIsSubmitting(false)
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(open) => {
+        if (isSubmitting) return // Prevent closing while submitting
         onOpenChange(open)
         if (!open) resetForm()
       }}
@@ -96,10 +129,17 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(tab) => {
+            setActiveTab(tab)
+            setError("") // Clear errors when switching tabs
+          }}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="login" disabled={isSubmitting}>Sign In</TabsTrigger>
+            <TabsTrigger value="signup" disabled={isSubmitting}>Sign Up</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login" className="mt-6">
@@ -116,37 +156,46 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="login-email">Email</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          id="email"
+                          id="login-email"
                           type="email"
                           placeholder="Enter your email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-10"
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="login-password">Password</Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
-                          id="password"
+                          id="login-password"
                           type="password"
                           placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="pl-10"
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-                      {isLoading ? "Signing in..." : "Sign In"}
+                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
                     </Button>
                   </form>
                 </CardContent>
@@ -178,6 +227,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           className="pl-10"
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
@@ -193,6 +243,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-10"
+                          disabled={isSubmitting}
                           required
                         />
                       </div>
@@ -204,16 +255,25 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                         <Input
                           id="signup-password"
                           type="password"
-                          placeholder="Create a password"
+                          placeholder="Create a password (min 6 characters)"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="pl-10"
+                          disabled={isSubmitting}
                           required
+                          minLength={6}
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-                      {isLoading ? "Creating account..." : "Create Account"}
+                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
                     </Button>
                   </form>
                 </CardContent>

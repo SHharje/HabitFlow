@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CheckCircle, LogOut, Plus, TrendingUp, Target, Calendar, BarChart3, Users, Sparkles } from "lucide-react"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CreateHabitDialog } from "@/components/habits/create-habit-dialog"
 import { HabitCard } from "@/components/habits/habit-card"
 import { DailyHabitsView } from "@/components/habits/daily-habits-view"
@@ -19,6 +19,7 @@ import { SocialFeed } from "@/components/social/social-feed"
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
+import { useRouter } from "next/navigation"
 
 interface Habit {
   _id: Id<"habits">
@@ -36,6 +37,7 @@ interface Habit {
 
 export default function DashboardPage() {
   const { user, signOut, isLoading } = useAuth()
+  const router = useRouter()
   const [showCreateHabit, setShowCreateHabit] = useState(false)
   const [habitToEdit, setHabitToEdit] = useState<Habit | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -65,31 +67,28 @@ export default function DashboardPage() {
     setShowCreateHabit(true)
   }
 
-  if (isLoading) {
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/")
+  }
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/")
+    }
+  }, [isLoading, user, router])
+
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/25">
             <Sparkles className="w-6 h-6 text-white animate-pulse" />
           </div>
-          <p className="text-muted-foreground font-medium">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-serif text-2xl font-bold text-foreground mb-4">Access Denied</h1>
-          <p className="text-muted-foreground mb-4">Please sign in to access your dashboard.</p>
-                      <Button
-              onClick={() => (window.location.href = "/")}
-              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
-            >
-              Go to Home
-            </Button>
+          <p className="text-muted-foreground font-medium">
+            {isLoading ? "Loading your dashboard..." : "Redirecting..."}
+          </p>
         </div>
       </div>
     )
@@ -111,7 +110,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={signOut}
+              onClick={handleSignOut}
               className="border-border hover:bg-muted bg-transparent"
             >
               <LogOut className="w-4 h-4 mr-2" />
