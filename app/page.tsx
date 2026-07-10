@@ -90,26 +90,106 @@ const features = [
 
 export default function HomePage() {
   const [showLogin, setShowLogin] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const { user, signOut, isLoading } = useAuth()
   const router = useRouter()
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
+      setIsRedirecting(true)
       router.push("/dashboard")
     }
   }, [user, isLoading, router])
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Show loading animation while checking auth or redirecting
+  if (isLoading || isRedirecting || (user && !isLoading)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-                      <div className="w-12 h-12 bg-gradient-to-r from-primary to-accent rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/25">
-              <Sparkles className="w-6 h-6 text-white animate-pulse" />
-            </div>
-          <p className="text-muted-foreground font-medium">Loading your experience...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
+        {/* Animated background orbs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-20"
+            style={{ background: "radial-gradient(circle, var(--chart-1), transparent)" }}
+            animate={{ scale: [1, 1.3, 1], x: [0, 30, 0], y: [0, -20, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute bottom-1/3 right-1/4 w-48 h-48 rounded-full opacity-15"
+            style={{ background: "radial-gradient(circle, var(--chart-2), transparent)" }}
+            animate={{ scale: [1.2, 1, 1.2], x: [0, -20, 0], y: [0, 30, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
+
+        <motion.div
+          className="text-center relative z-10"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Spinning rings */}
+          <div className="relative w-24 h-24 mx-auto mb-8">
+            <motion.div
+              className="absolute inset-0 rounded-full border-2 border-transparent"
+              style={{ borderTopColor: "var(--chart-1)", borderRightColor: "var(--chart-1)" }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute inset-2 rounded-full border-2 border-transparent"
+              style={{ borderBottomColor: "var(--chart-2)", borderLeftColor: "var(--chart-2)" }}
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute inset-4 rounded-full border-2 border-transparent"
+              style={{ borderTopColor: "var(--chart-4)", borderLeftColor: "var(--chart-4)" }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Center logo */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg shadow-primary/25"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-5 h-5 text-white" />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Text */}
+          <motion.p
+            className="text-lg font-semibold text-foreground mb-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {isRedirecting || user ? "Welcome back!" : "HabitFlow"}
+          </motion.p>
+          <motion.p
+            className="text-sm text-muted-foreground font-medium"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            {isRedirecting || user ? "Taking you to your dashboard..." : "Loading your experience..."}
+          </motion.p>
+
+          {/* Loading dots */}
+          <div className="flex justify-center gap-1.5 mt-4">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full bg-muted-foreground/50"
+                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+              />
+            ))}
+          </div>
+        </motion.div>
       </div>
     )
   }
